@@ -1,0 +1,12 @@
+#Mon Jun 23 11:28:54 BST 2014
+eclipse.preferences.version=1
+environment/project/com.xmos.cdt.toolchain.1040961761/XMOS_MODULE_PATH/delimiter=\:
+environment/project/com.xmos.cdt.toolchain.1040961761/XMOS_MODULE_PATH/operation=append
+environment/project/com.xmos.cdt.toolchain.1040961761/XMOS_MODULE_PATH/value=/Users/RM/Desktop/Project/ultrasound-code/40kHz-Timer for Skin Haptics\:/Users/RM/Desktop/Project/code ultraSkin/SkinTransducer\:/Users/RM/Desktop/Project/ultrasound-code/Ultrahaptics64-UART-40kHz\:/Users/RM/Downloads/sc_pwm/app_pwm_multibit_port_demo
+environment/project/com.xmos.cdt.toolchain.1040961761/append=true
+environment/project/com.xmos.cdt.toolchain.1040961761/appendContributed=true
+environment/project/com.xmos.cdt.toolchain.1377359431/XMOS_MODULE_PATH/delimiter=\:
+environment/project/com.xmos.cdt.toolchain.1377359431/XMOS_MODULE_PATH/operation=append
+environment/project/com.xmos.cdt.toolchain.1377359431/XMOS_MODULE_PATH/value=/Users/RM/Desktop/Project/ultrasound-code/40kHz-Timer for Skin Haptics\:/Users/RM/Desktop/Project/code ultraSkin/SkinTransducer\:/Users/RM/Desktop/Project/ultrasound-code/Ultrahaptics64-UART-40kHz\:/Users/RM/Downloads/sc_pwm/app_pwm_multibit_port_demo
+environment/project/com.xmos.cdt.toolchain.1377359431/append=true
+environment/project/com.xmos.cdt.toolchain.1377359431/appendContributed=true
