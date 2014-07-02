@@ -14,8 +14,10 @@
 #include <string.h>
 
 #define HALFTIME_40KHZ 1250 //1250
-#define PULSES 2    //40000*2
-#define SAMPLES 5000
+#define FLASH_PERIOD 20000000
+#define PULSES 2000   //40000*2
+#define SAMPLES 100
+#define TRANSD 4
 
 #define TIMER_FREQUENCY 10 //MHz
 #define FREQUENCY 40000 // Hz
@@ -34,8 +36,8 @@ out port LED = XS1_PORT_4F;
 out port outClock = XS1_PORT_1D;
 clock    clk      = XS1_CLKBLK_1;
 
-//void transmitPulsesTicks(out buffered port:4 outP,int pulses,int ticks);
-void transmitPulsesTicks(out buffered port:4 outP,int pulses,int ticks);
+void transmitPulsesTicks(out buffered port:4 outP,int pulses,int ticks,int transd);
+//void transmitPulsesTicks(out buffered port:4 outP,int pulses,int ticks,int transd);
 void infinite40hz(out buffered port:4 outP);
 //void transmitInfTimer(out buffered port:4 outP, int onTime, int offTime);
 void transmitInfTimer(out buffered port:4 outP, int onTime, int offTime);
@@ -44,11 +46,11 @@ void transmitPulsesTimer(out buffered port:4 outP, int onTime, int offTime,int p
 int menu();
 void flush_in();
 void transmitBuffer(out buffered port:4 outP,int buffer[], int num_samples);
-void receiveBuffer(in buffered port:1 inP,int buffer[]);
+void receiveBuffer(in buffered port:1 inP,int buffer[], int transd);
 void output_input_timer(in port p_button,clock c, in buffered port:1 inP,
             out buffered port:4 outP,int buffer[], int time_delay);
-void output_input_ticks(in port p_button,clock c, in buffered port:1 inP,
-        out buffered port:4 outP,int buffer[],int ticks);
+void output_input_ticks(in port p_button,clock c, in buffered port:1 inP,out buffered port:4 outP,
+                        int buffer[],int ticks,int transd);
 void waitForButtonClick(in port button);
 
 void transmitInf(out port pA, int onTime, int offTime);
@@ -59,6 +61,8 @@ void firstPosition(int buffer[], int length);
 void invertBuffer(int buffer[], int length);
 void lastposition(int buffer[], int length);
 void invertBuffer(int buffer[], int length);
+void flashLED(out port led,int freq);
+
 /*
 -------------------------------------------//
 *
@@ -70,6 +74,9 @@ int main(void)
 
 
     int buffer[SAMPLES];
+    int transd=0;
+
+
     int op;
     int ticks=0;
     int half_wave;
@@ -87,8 +94,7 @@ int main(void)
 
     outP <: 0; // start an output
     sync(outP);
-
-    LED <:1111;
+    calculateFrequency(TIMER_FREQUENCY,FREQUENCY,ticks);
 
     while(1)
     {
@@ -109,20 +115,18 @@ int main(void)
                 break;
             case 3:
                 calculateFrequency(TIMER_FREQUENCY,FREQUENCY,ticks);
-                output_input_ticks(BUT1,clk, inP,outP,buffer, ticks);
+                output_input_ticks(BUT1,clk, inP,outP,buffer, ticks,transd);
 
                 break;
             case 4:
-                int sendNum = 0b0000;
+                printf("test: 4 transducer sending\n");
                 while(1)
                 {
                     waitForButtonClick(BUT1);
-                    printf("Send port: %x\n", sendNum);
-                    outP <: sendNum;
-                    sendNum++;
-                    if(sendNum>15) sendNum = 0;
+                    output_input_ticks(BUT1,clk, inP,outP,buffer, ticks,transd);
+                    transd++;
+                    if(transd>4) transd = 1;
                 }
-
                 break;
             default:
                 break;
@@ -130,18 +134,16 @@ int main(void)
         flush_in();
     }
 
-    LED <:0;
     return 0;
 }
 
 void output_input_timer(in port p_button,clock c, in buffered port:1 inP,
             out buffered port:4 outP,int buffer[], int time_delay)
 {
-
     par
     {
         transmitPulsesTimer(outP,time_delay, time_delay,PULSES);
-        receiveBuffer(inP,buffer);
+        receiveBuffer(inP,buffer,1);
     }
     firstPosition(buffer,SAMPLES);
     lastposition(buffer,SAMPLES);
@@ -150,32 +152,28 @@ void output_input_timer(in port p_button,clock c, in buffered port:1 inP,
 
 }
 void output_input_ticks(in port p_button,clock c, in buffered port:1 inP,out buffered port:4 outP,
-                        int buffer[],int ticks)
+                        int buffer[],int ticks,int transd)
 {
-    //waitForButtonClick(p_button);
-
-    //calculateTimer(FREQUENCY,timedelay);
-   // calculateFrequency(T, FREQUENCY,ticks);
 
     par
     {
-        transmitPulsesTicks(outP,PULSES,ticks);
-        receiveBuffer(inP,buffer);
+        transmitPulsesTicks(outP,PULSES,ticks,transd);
+        receiveBuffer(inP,buffer,transd);
     }
     //invertBuffer(buffer,SAMPLES);
-    firstPosition(buffer,SAMPLES);
-    lastposition(buffer,SAMPLES);
-    //printBuffer(buffer);
+    //firstPosition(buffer,SAMPLES);
+    //lastposition(buffer,SAMPLES);
+    printBuffer(buffer,SAMPLES);
     // transmitBuffer(outP,buffer,SAMPLES);
 
 
 }
-void transmitPulsesTicks(out buffered port:4 outP,int pulses,int ticks)
+void transmitPulsesTicks(out buffered port:4 outP,int pulses,int ticks,int transd)
 {
     for(int j=0; j<pulses; j++)
     {
         for (int i = 0; i<ticks/2; i++) {
-            outP <: 1;
+            outP <: 1 << transd;
         }
         for (int i = 0; i<ticks/2; i++) {
             outP <: 0;
@@ -229,12 +227,15 @@ void transmitBuffer(out buffered port:4 outP,int buffer[], int num_samples)
     }
 
 }
-void receiveBuffer(in buffered port:1 inP,int buffer[])
+void receiveBuffer(in buffered port:1 inP,int buffer[], int transd)
 {
+    int aux;
      for(int i=0 ; i<SAMPLES ; i++)
-        {
-            inP :> buffer[i];
-        }
+     {
+         inP :> aux;
+         //buffer[i] = buffer[i] << transd;
+         buffer[i] = aux << transd;
+     }
 }
 void waitForButtonClick(in port button)
 {
@@ -274,7 +275,7 @@ void transmitInfTimer(out buffered port:4 outP, int onTime, int offTime)
     t:>currentTime;
     while(1)
     {
-    // turn ON
+        // turn ON
         outP <:15;             // all outputs
         currentTime += onTime;
         t when timerafter (currentTime) :> void;
@@ -325,11 +326,28 @@ void invertBuffer(int buffer[], int length)
 void lastposition(int buffer[],int length)
 {
     int pos = 0;
-    for (int i =0; i<length; i++)
+    for (int i=0; i<length; i++)
     {
         if(buffer[i]==1) pos = i;
     }
     printf("the last possition with 1 is: %d\n", pos);
 }
+void flashLED(out port led,int freq)
+{
+    timer tmr;
+    int t;
+    tmr :> t;
+
+    led <: 0x1;
+    t += freq;
+    tmr when timerafter(t) :> void;
+    led <: 0x0;
+    t += freq;
+    tmr when timerafter(t) :> void;
+
+}
+
+
+
 
 
